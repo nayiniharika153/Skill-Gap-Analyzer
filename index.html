@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SkillGapAnalyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef2f7;--ink:#14213d;--mute:#5b6b85;--card:#fff;--line:#d5dce8;--acc:#e8590c;--ok:#2b8a6e;--mid:#b78500;--gap:#d6336c;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1729;--ink:#e8edf7;--mute:#93a3c0;--card:#18223a;--line:#2b3956;--acc:#ff8a4c;--ok:#4cc9a0;--mid:#f0c23b;--gap:#ff6b9a}}
+:root[data-theme="dark"]{--bg:#0f1729;--ink:#e8edf7;--mute:#93a3c0;--card:#18223a;--line:#2b3956;--acc:#ff8a4c;--ok:#4cc9a0;--mid:#f0c23b;--gap:#ff6b9a}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,sans-serif;line-height:1.5}
+main{max-width:720px;margin:0 auto;padding:24px 18px 48px}
+h1{font-size:2.2rem;font-weight:800;margin:0 0 6px;letter-spacing:-.02em}
+h2{font-size:1.15rem;margin:0 0 10px}
+p.sub{color:var(--mute);margin:0 0 24px;max-width:52ch}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:transparent}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.hint{font-size:.85rem;color:var(--mute);margin:10px 0 0}
+details{border:1px solid var(--line);border-radius:12px;margin-top:10px;padding:0 14px}
+summary{list-style:none;cursor:pointer;padding:14px 0;display:flex;align-items:center;gap:12px}
+summary::-webkit-details-marker{display:none}
+.pct{font-size:1.8rem;font-weight:800;min-width:64px;color:var(--acc)}
+.rn{flex:1}.rn b{display:block}.rn small{color:var(--mute)}
+.bar{height:8px;background:var(--line);border-radius:6px;overflow:hidden;margin-bottom:12px}
+.bar i{display:block;height:100%;background:var(--acc);transition:width .3s}
+.body{padding-bottom:14px}
+.body h3{font-size:.95rem;margin:14px 0 6px}
+.body p{margin:0;color:var(--mute);font-size:.94rem}
+.path{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.9rem}
+.path span{padding:3px 10px;border:1px solid var(--line);border-radius:8px}
+.path em{color:var(--mute);font-style:normal}
+.have{color:var(--ok);font-weight:600}
+.step{border-top:1px solid var(--line);padding:10px 0}
+.step:first-of-type{border-top:0}
+.step b{display:block}.step span{color:var(--mute);font-size:.92rem}
+.tl{border-left:3px solid var(--acc);margin-left:6px}.st{padding:0 0 14px 14px;position:relative}.st:last-child{padding-bottom:0}.st small{color:var(--acc);font-weight:600;display:block}.st b{display:block}.st span{color:var(--mute);font-size:.92rem;display:block}.me{display:inline-block;margin-top:4px;font-style:normal;font-size:.85rem;font-weight:600;color:var(--ok)}
+.empty{color:var(--mute)}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>SkillGapAnalyzer</h1>
+  <p class="sub">Select the skills you already have. See which careers fit you, where they can lead, and what to learn next.</p>
+
+  <section>
+    <h2>Skills I have</h2>
+    <div class="chips" id="chips"></div>
+    <p class="hint" id="count">Tap to select. Nothing selected yet.</p>
+  </section>
+
+  <section>
+    <h2>Your career fit</h2>
+    <div id="out"></div>
+    <p class="hint">Outlook notes are general guidance, not a forecast. Check current job listings in your area.</p>
+  </section>
+</main>
+<script>
+const TIPS={
+"HTML & CSS":"Build 3 responsive layouts from scratch.",
+"JavaScript":"Take a modern JS course, then build a small app.",
+"React":"Recreate a to-do app with components and state.",
+"Git":"Practice branches and pull requests on a personal repo.",
+"Accessibility":"Audit one page with a screen reader and fix the issues.",
+"Testing":"Add unit tests to a project using Vitest or Jest.",
+"Excel":"Learn pivot tables and lookup formulas.",
+"SQL":"Practice joins and aggregations on public datasets.",
+"Python":"Use pandas to clean and summarize a CSV file.",
+"Statistics":"Cover distributions, hypothesis tests and regression basics.",
+"Data Visualization":"Build a dashboard in Tableau or Power BI.",
+"Communication":"Write a one-page summary of any project you finish.",
+"User Research":"Interview five people and summarize the patterns.",
+"Wireframing":"Sketch a flow on paper, then rebuild it in Figma.",
+"Prototyping":"Make a clickable prototype and test it with three people.",
+"Visual Design":"Redesign one screen to practice type, spacing and color.",
+"Design Systems":"Create a small component library in Figma.",
+"Product Strategy":"Write a one-page strategy for an app you use daily.",
+"Roadmapping":"Build a quarterly roadmap with clear priorities.",
+"Technical Literacy":"Learn how APIs and databases work at a high level."};
+const ROLES=[
+{n:"Frontend Developer",s:{"HTML & CSS":3,"JavaScript":5,"React":4,"Git":3,"Accessibility":2,"Testing":2},
+ f:[["Junior Frontend Developer","Build web pages from designs, fix bugs, learn from seniors."],["Frontend Engineer","Own complete features, review code, work with designers and backend teams."],["Senior Engineer or Tech Lead","Decide how the product is built, guide a team, or move into full-stack or management."]],
+ d:"High. Every company needs websites and apps.",ai:"AI writes routine code faster, so people who understand users and solve real problems stay valuable."},
+{n:"Data Analyst",s:{"Excel":3,"SQL":5,"Python":4,"Statistics":4,"Data Visualization":3,"Communication":2},
+ f:[["Junior Data Analyst","Clean data, make reports and dashboards, answer questions from managers."],["Data Analyst","Find why numbers change, guide business decisions, automate reports."],["Senior Analyst, Analytics Manager or Data Scientist","Lead analysis for a department or build prediction models."]],
+ d:"High. Companies in every field use data.",ai:"AI handles basic queries, so asking the right questions and explaining results matters more."},
+{n:"UX Designer",s:{"User Research":5,"Wireframing":3,"Prototyping":4,"Visual Design":3,"Accessibility":2,"Design Systems":2},
+ f:[["Junior UX Designer","Sketch screens, help with user research, improve existing designs."],["UX Designer","Lead design for a feature, run user tests, work with developers."],["Senior Designer or Design Lead","Set the design direction for a product and mentor other designers."]],
+ d:"Medium. Fewer entry jobs, so a strong portfolio is needed.",ai:"AI makes visuals quickly, so research and design decisions matter most."},
+{n:"Product Manager",s:{"Product Strategy":4,"User Research":4,"Statistics":3,"Roadmapping":3,"Communication":4,"Technical Literacy":2},
+ f:[["Associate Product Manager","Write requirements and track tasks. Many people start in another role first."],["Product Manager","Own one product: decide what to build, work with engineers and designers, measure results."],["Senior PM or Director of Product","Manage several products or PMs and shape company strategy."]],
+ d:"Medium. Fewer openings, often filled by people from engineering, design or data.",ai:"AI helps with writing and analysis. Judgment and communication stay human work."}];
+const ALL=[...new Set(ROLES.flatMap(r=>Object.keys(r.s)))];
+let sel=new Set();
+const $=id=>document.getElementById(id);
+function fut(x){
+  const lab=["Now, first job","After 2 to 4 years","After 5+ years"];
+  const here=x.p>=75?0:-1;
+  const note=x.p>=75?"You can apply for this now.":x.p>=45?"You can reach this after closing the gaps below.":"Start with the basics below first.";
+  return `<div class="tl">`+x.r.f.map((f,i)=>`<div class="st"><small>${lab[i]}</small><b>${f[0]}</b><span>${f[1]}</span>${i===0?`<em class="me">${note}</em>`:""}</div>`).join("")+`</div>`}
+function tog(k){sel.has(k)?sel.delete(k):sel.add(k);render()}
+function render(){
+  $("chips").innerHTML=ALL.map(k=>`<button class="chip" aria-pressed="${sel.has(k)}" data-k="${k}">${k}</button>`).join("");
+  $("chips").querySelectorAll("button").forEach(b=>b.onclick=()=>tog(b.dataset.k));
+  $("count").textContent=sel.size?sel.size+" selected.":"Tap to select. Nothing selected yet.";
+  if(!sel.size){$("out").innerHTML='<p class="empty">Pick at least one skill to see roles that fit you.</p>';return}
+  const res=ROLES.map(r=>{
+    const ks=Object.keys(r.s),tot=ks.reduce((a,k)=>a+r.s[k],0);
+    const got=ks.filter(k=>sel.has(k)),miss=ks.filter(k=>!sel.has(k)).sort((a,b)=>r.s[b]-r.s[a]);
+    const p=Math.round(got.reduce((a,k)=>a+r.s[k],0)/tot*100);
+    return {r,p,got,miss}}).sort((a,b)=>b.p-a.p);
+  $("out").innerHTML=res.map((x,i)=>{
+    const st=x.p>=75?"Ready to apply":x.p>=45?"Close, a few gaps":"Early stage";
+    const wk=x.miss.length*3;
+    const tips=x.miss.length?x.miss.map(k=>`<div class="step"><b>${k}</b><span>${TIPS[k]}</span></div>`).join(""):"<p>You cover every skill for this role. Build a project and start applying.</p>";
+    return `<details ${i===0?"open":""}><summary><div class="pct">${x.p}%</div><div class="rn"><b>${x.r.n}</b><small>${st}${i===0?" · Best match":""}</small></div></summary>
+    <div class="body"><div class="bar"><i style="width:${x.p}%"></i></div>
+    <h3>Your future in this career</h3>${fut(x)}
+    <h3>Job demand</h3><p>${x.r.d}</p>
+    <h3>Effect of AI</h3><p>${x.r.ai}</p>
+    <h3>You already have</h3><p class="have">${x.got.length?x.got.join(", "):"None of this role's skills yet"}</p>
+    <h3>Improve next${x.miss.length?` (about ${wk} weeks of steady practice)`:""}</h3>${tips}</div></details>`}).join("");
+}
+render();
+</script>
+</body>
+</html>
